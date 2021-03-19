@@ -36,10 +36,10 @@ class MCTS:
 
     def do_rollout(self, node):
         "Make the tree one layer better. (Train for one iteration.)"
-        path = self._select(node)
-        leaf = path[-1]
-        self._expand(leaf)
-        reward = self._simulate(leaf)
+        path = self._select(node) # 1. find an leaf of tree, save path for later backward.
+        leaf = path[-1] # 2. this is the leaf we want to expand in this rollout
+        self._expand(leaf) # 3. only update self.children dict
+        reward = self._simulate(leaf) # 4. random choose action then return the final reward
         self._backpropagate(path, reward)
 
     def _select(self, node):
