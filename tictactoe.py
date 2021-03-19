@@ -114,13 +114,31 @@ class FrozenLakeBoard(_TTTTB, Node):
         board.env.render()
         return "Finish render"
 
+class ModifiedFrozenLakeGymEnv(gym.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self.env = env
+        self.t = 0.
+    
+    def step(self, action):
+        next_state, reward, done, info = self.env.step(action)
+        # modify ...
+        s_type = self.env.desc.flatten()[next_state]
+        self.t += 0.1
+        if s_type == b'F': reward = 0.
+        elif s_type == b'H': reward = -0.01
+        elif s_type == b'G': reward = max(1, (+10. - self.t))
+
+        return next_state, reward, done, info
+
 class FrozenLakeEnv:
     actions = [0, 1, 2, 3]
 
     def __init__(self, setting, history):
         self.setting = setting
         self.history = history
-        self.env = gym.make(setting['name'], is_slippery=setting['is_slippery'])
+    
+        self.env = ModifiedFrozenLakeGymEnv(gym.make(setting['name'], is_slippery=setting['is_slippery']))
         self.reset_to(history) # init with this {'name': 'FrozenLake-v0', 'is_slippery': False}
         return
     
@@ -163,7 +181,7 @@ def play_game():
         #     break
         # You can train as you go, or only at the beginning.
         # Here, we train as we go, doing fifty rollouts each turn.
-        for _ in range(50):
+        for _ in range(1000):
             tree.do_rollout(board)
         board = tree.choose(board)
         print(board.to_pretty_string())
