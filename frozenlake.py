@@ -20,15 +20,12 @@ from random import choice
 from monte_carlo_tree_search import MCTS, Node
 import gym
 
-_TTTB = namedtuple("TicTacToeBoard", "tup turn winner terminal")
-
 _TTTTB = namedtuple("FrozenLakeBoard", "env history terminal reward_")
 
 
-
-
 class FrozenLakeBoard(_TTTTB, Node):
-
+    """A FrozenLakeBoard which is similar to to TicTacToeBoard
+    """
     def find_children(board):
         if board.terminal:  # If the game is finished then no moves can be made
             return set()
@@ -64,6 +61,11 @@ class FrozenLakeBoard(_TTTTB, Node):
         return "Finish render"
 
 class ModifiedFrozenLakeGymEnv(gym.Wrapper):
+    """Environment Wrapper
+
+    Wrap the environment to do reward shaping, stop the env after x steps.
+
+    """
     def __init__(self, env):
         super().__init__(env)
         self.env = env
@@ -73,10 +75,11 @@ class ModifiedFrozenLakeGymEnv(gym.Wrapper):
         next_state, reward, done, info = self.env.step(action)
         # modify ...
         s_type = self.env.desc.flatten()[next_state]
-        self.t += 0.1
+        self.t += 1.
         if s_type == b'F': reward = 0.
         elif s_type == b'H': reward = -0.01
-        elif s_type == b'G': reward = max(1, (+10. - self.t))
+        elif s_type == b'G': reward = max(1, (+10. - 0.1*self.t))
+        if self.t > 100: done = True
 
         return next_state, reward, done, info
 
@@ -92,6 +95,7 @@ class FrozenLakeEnv:
         return
     
     def reset_to(self, history):
+        "reset the agent to some position according to the history"
         self.env.reset()
         for a in history:
             self.env.step(int(a))
@@ -112,51 +116,18 @@ class FrozenLakeEnv:
         return FrozenLakeEnv(self.setting, self.history)
 
 
-
 def play_game():
     tree = MCTS()
     # board = new_tic_tac_toe_board()
     board = new_frozen_lake_board()
     print(board.to_pretty_string())
     while True:
-        # row_col = input("enter row,col: ")
-        # row, col = map(int, row_col.split(","))
-        # index = 3 * (row - 1) + (col - 1)
-        # if board.tup[index] is not None:
-        #     raise RuntimeError("Invalid move")
-        # board = board.make_move(index)
-        # print(board.to_pretty_string())
-        # if board.terminal:
-        #     break
-        # You can train as you go, or only at the beginning.
-        # Here, we train as we go, doing fifty rollouts each turn.
-        for _ in range(1000):
+        for _ in range(500):
             tree.do_rollout(board)
         board = tree.choose(board)
         print(board.to_pretty_string())
         if board.terminal:
             break
-
-
-def _winning_combos():
-    for start in range(0, 9, 3):  # three in a row
-        yield (start, start + 1, start + 2)
-    for start in range(3):  # three in a column
-        yield (start, start + 3, start + 6)
-    yield (0, 4, 8)  # down-right diagonal
-    yield (2, 4, 6)  # down-left diagonal
-
-
-def _find_winner(tup):
-    "Returns None if no winner, True if X wins, False if O wins"
-    for i1, i2, i3 in _winning_combos():
-        v1, v2, v3 = tup[i1], tup[i2], tup[i3]
-        if False is v1 is v2 is v3:
-            return False
-        if True is v1 is v2 is v3:
-            return True
-    return None
-
 
 def new_frozen_lake_board():
     setting = {'name': 'FrozenLake-v0', 'is_slippery': False}
